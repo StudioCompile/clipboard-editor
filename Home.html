@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Clipboard Tester</title>
+<style>
+body { font-family: Arial, sans-serif; background: #eef1f5; margin:0; padding:25px; }
+h1 { font-size:26px; margin-bottom:15px; }
+h2 { font-size:20px; margin-top:0; }
+.card { background:#fff; padding:18px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:25px; }
+.scrollbox, .codebox, select, input, textarea { border:1px solid #ccd0d6; background:#fafafa; padding:10px; border-radius:6px; font-size:14px; width:100%; box-sizing:border-box; margin-top:8px; max-height:220px; overflow:auto; }
+.codebox { font-family: Consolas, monospace; background:#1f1f1f; color:#b5f5b5; white-space: pre-wrap; }
+[contenteditable] { outline:none; }
+button { padding:10px 16px; background:#4a7dfc; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; margin-top:10px; }
+button:hover { background:#365fcc; }
+.format-card { border:1px solid #ccd0d6; border-radius:6px; padding:10px; margin-top:10px; background:#f8f8f8; }
+img { max-width:100%; }
+</style>
+</head>
+<body>
+
+<h1>Advanced Clipboard Tester</h1>
+
+<!-- =============================== -->
+<!-- INPUT DROPDOWN -->
+<!-- =============================== -->
+<div class="card">
+<h2>Select Input Type</h2>
+<select id="inputSelector">
+<option value="none">-- Show Input --</option>
+<option value="textInput">Text Input (Plain)</option>
+<option value="textarea">Textarea (Plain)</option>
+<option value="contentEditable">ContentEditable (HTML)</option>
+<option value="codeBox">Code Paste (Literal HTML)</option>
+</select>
+
+<div id="textInputDiv" style="display:none;">
+  <input class="scrollbox" type="text" placeholder="Paste here (Ctrl+V)">
+</div>
+
+<div id="textareaDiv" style="display:none;">
+  <textarea class="scrollbox" placeholder="Paste here (Ctrl+V)"></textarea>
+</div>
+
+<div id="contentEditableDiv" style="display:none;">
+  <div class="scrollbox" contenteditable="true">Paste here (Ctrl+V)</div>
+</div>
+
+<div id="codeBoxDiv" style="display:none;">
+  <div id="codeBox" class="codebox" contenteditable="true">Paste here (Ctrl+V)</div>
+</div>
+</div>
+
+<!-- =============================== -->
+<!-- RAW CLIPBOARD READER -->
+<!-- =============================== -->
+<div class="card">
+<h2>Raw Clipboard Viewer</h2>
+<p>Click the button to view clipboard literally (HTML, plain text, etc.)</p>
+<button id="readBtn">Read Clipboard Data</button>
+
+<h3>Available Types</h3>
+<div id="typesOut" class="codebox"></div>
+
+<h3>text/plain</h3>
+<div id="plainOut" class="codebox"></div>
+
+<h3>text/html</h3>
+<div id="htmlOut" class="codebox"></div>
+</div>
+
+<!-- =============================== -->
+<!-- CLIPBOARD WRITER -->
+<!-- =============================== -->
+<div class="card">
+<h2>Write to Clipboard (Multiple Formats)</h2>
+<div id="writeFormats"></div>
+<button id="addFormatBtn">Add Format</button>
+<button id="writeBtn">Write Clipboard</button>
+</div>
+
+<script>
+// ---------- Input Selector ----------
+const inputSelector = document.getElementById("inputSelector");
+const inputDivs = {
+  textInput: document.getElementById("textInputDiv"),
+  textarea: document.getElementById("textareaDiv"),
+  contentEditable: document.getElementById("contentEditableDiv"),
+  codeBox: document.getElementById("codeBoxDiv")
+};
+inputSelector.addEventListener("change", ()=>{
+  Object.values(inputDivs).forEach(d=>d.style.display="none");
+  const val=inputSelector.value;
+  if(inputDivs[val]) inputDivs[val].style.display="block";
+});
+
+// ---------- Clipboard Reader ----------
+document.getElementById("readBtn").addEventListener("click", async ()=>{
+  const typesOut=document.getElementById("typesOut");
+  const plainOut=document.getElementById("plainOut");
+  const htmlOut=document.getElementById("htmlOut");
+  typesOut.innerText=""; plainOut.innerText=""; htmlOut.innerText="";
+  try{
+    const items = await navigator.clipboard.read();
+    const item = items[0];
+    typesOut.innerText = item.types.join("\n");
+    if(item.types.includes("text/plain")) plainOut.innerText = await (await item.getType("text/plain")).text(); else plainOut.innerText="(none)";
+    if(item.types.includes("text/html")) htmlOut.innerText = await (await item.getType("text/html")).text(); else htmlOut.innerText="(none)";
+  }catch(e){
+    alert("Clipboard access denied: "+e);
+  }
+});
+
+// ---------- Clipboard Writer ----------
+const writeFormatsDiv = document.getElementById("writeFormats");
+function addFormatCard(type="", content=""){
+  const div = document.createElement("div");
+  div.className="format-card";
+  div.innerHTML=`
+  <label>Type:</label>
+  <select class="formatType">
+    <option value="text/plain" ${type==="text/plain"?"selected":""}>text/plain</option>
+    <option value="text/html" ${type==="text/html"?"selected":""}>text/html</option>
+    <option value="text/rtf" ${type==="text/rtf"?"selected":""}>text/rtf</option>
+    <option value="image/png" ${type==="image/png"?"selected":""}>image/png</option>
+  </select>
+  <label>Content (or select file for images):</label>
+  <textarea class="formatContent">${content}</textarea>
+  <input type="file" class="formatFile" style="display:none;">
+  <button class="removeBtn">Remove</button>
+  `;
+  const select = div.querySelector(".formatType");
+  const textarea = div.querySelector(".formatContent");
+  const fileInput = div.querySelector(".formatFile");
+  select.addEventListener("change", ()=>{
+    if(select.value.startsWith("image/")) { textarea.style.display="none"; fileInput.style.display="block"; }
+    else { textarea.style.display="block"; fileInput.style.display="none"; }
+  });
+  div.querySelector(".removeBtn").addEventListener("click", ()=>div.remove());
+  writeFormatsDiv.appendChild(div);
+}
+document.getElementById("addFormatBtn").addEventListener("click", ()=>addFormatCard());
+document.getElementById("writeBtn").addEventListener("click", async ()=>{
+  try{
+    const cards = writeFormatsDiv.querySelectorAll(".format-card");
+    const itemObj = {};
+    for(const card of cards){
+      const type = card.querySelector(".formatType").value;
+      if(type.startsWith("image/")){
+        const file = card.querySelector(".formatFile").files[0];
+        if(file) itemObj[type]=file;
+      } else {
+        const text = card.querySelector(".formatContent").value;
+        itemObj[type]=new Blob([text], {type});
+      }
+    }
+    if(Object.keys(itemObj).length===0) return alert("No formats to write.");
+    await navigator.clipboard.write([new ClipboardItem(itemObj)]);
+    alert("Clipboard updated!");
+  }catch(e){ alert("Failed to write: "+e); }
+});
+
+// ---------- Force plain text paste for code box ----------
+const codeBox=document.getElementById("codeBox");
+if(codeBox){
+  codeBox.addEventListener("paste", function(e){
+    e.preventDefault();
+    const text=e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, text);
+  });
+}
+</script>
+
+</body>
+</html>
