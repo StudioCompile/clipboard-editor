@@ -2,97 +2,547 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Advanced Clipboard Tester</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clipboard Editor</title>
 <style>
-body { font-family: Arial, sans-serif; background: #eef1f5; margin:0; padding:25px; }
-h1 { font-size:26px; margin-bottom:15px; }
-h2 { font-size:20px; margin-top:0; }
-.card { background:#fff; padding:18px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:25px; }
-.scrollbox, .codebox, select, input, textarea { border:1px solid #ccd0d6; background:#fafafa; padding:10px; border-radius:6px; font-size:14px; width:100%; box-sizing:border-box; margin-top:8px; max-height:220px; overflow:auto; }
-.codebox { font-family: Consolas, monospace; background:#1f1f1f; color:#b5f5b5; white-space: pre-wrap; }
-[contenteditable] { outline:none; }
-button { padding:10px 16px; background:#4a7dfc; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; margin-top:10px; }
-button:hover { background:#365fcc; }
-.format-card { border:1px solid #ccd0d6; border-radius:6px; padding:10px; margin-top:10px; background:#f8f8f8; }
-img { max-width:100%; }
+  :root {
+    --bg: #08090a;
+    --panel: #0e0f11;
+    --panel-alt: #101214;
+    --border: #232427;
+    --border-soft: #1b1c1f;
+    --text: #c7cad0;
+    --text-dim: #7a7d84;
+    --text-bright: #eceef0;
+    --accent: #4a86e0;
+    --danger: #e05a5a;
+    --good: #4fbd7a;
+    --mono: "Cascadia Code", "Consolas", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Segoe UI", "Segoe UI Web", Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  /* ---------- Top nav ---------- */
+  .navbar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 30px;
+  }
+
+  .navbtn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 14px;
+    height: 30px;
+    cursor: pointer;
+    transition: color 0.12s ease, background 0.12s ease;
+  }
+
+  .navbtn:hover { color: var(--text-bright); background: var(--panel-alt); }
+
+  .navbtn.active {
+    color: var(--text-bright);
+    background: var(--panel-alt);
+    box-shadow: inset 0 -2px 0 var(--text-dim);
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 28px 24px 60px 24px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin: 0 0 4px 0;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 0 0 24px 0;
+  }
+
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+
+  .card h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin: 0 0 4px 0;
+  }
+
+  .card .desc {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin: 0 0 12px 0;
+  }
+
+  label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 12px 0 6px 0;
+  }
+  label:first-child { margin-top: 0; }
+
+  input[type="text"], input[type="file"] {
+    width: 100%;
+    height: 30px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 0 11px;
+    outline: none;
+    box-shadow: none;
+    transition: border-color 0.12s ease;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 9px 11px;
+    outline: none;
+    box-shadow: none;
+    transition: border-color 0.12s ease;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--text-dim);
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* ---------- Custom dropdown (replaces native <select>) ---------- */
+  .dropdown {
+    position: relative;
+    width: 100%;
+  }
+
+  .dropdown-toggle {
+    width: 100%;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 400;
+    padding: 0 11px;
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+    box-shadow: none;
+    transition: border-color 0.12s ease;
+  }
+
+  .dropdown-toggle:hover { border-color: var(--text-dim); }
+  .dropdown-toggle.open { border-color: var(--text-dim); }
+
+  .dropdown-chevron {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--text-dim);
+    margin-left: 10px;
+    flex-shrink: 0;
+    transition: transform 0.12s ease;
+  }
+
+  .dropdown-toggle.open .dropdown-chevron { transform: rotate(180deg); }
+
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    z-index: 30;
+    max-height: 210px;
+    overflow-y: auto;
+  }
+
+  .dropdown-menu.open { display: block; }
+
+  .dropdown-option {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 0 11px;
+    font-size: 13.5px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .dropdown-option:hover { background: #16181c; color: var(--text-bright); }
+  .dropdown-option.active { background: #1e2126; color: var(--text-bright); }
+
+  /* compact variant used inside format cards */
+  .dropdown-sm .dropdown-toggle { padding: 0 10px; font-size: 12.5px; }
+  .dropdown-sm .dropdown-option { padding: 0 10px; font-size: 12.5px; }
+
+  .scrollbox {
+    min-height: 60px;
+    max-height: 180px;
+    overflow: auto;
+  }
+
+  [contenteditable] { outline: none; }
+  [contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+
+  textarea { resize: vertical; min-height: 60px; }
+
+  .codebox {
+    font-family: var(--mono);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 9px 11px;
+    max-height: 210px;
+    overflow: auto;
+    font-size: 12.5px;
+    min-height: 30px;
+  }
+
+  h3 {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-dim);
+    margin: 16px 0 6px 0;
+  }
+  h3:first-of-type { margin-top: 4px; }
+
+  /* ---------- Buttons ---------- */
+  button {
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    height: 30px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: #060606;
+    color: var(--text-bright);
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+
+  button:hover { background: #101112; border-color: var(--text-dim); }
+
+  button.secondary {
+    background: #060606;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.secondary:hover { border-color: var(--text-dim); background: #101112; }
+
+  button.danger-outline {
+    background: #060606;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  button.danger-outline:hover { border-color: var(--danger); background: #101112; }
+
+  .btnrow { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* ---------- Format cards (inline, no modal) ---------- */
+  .format-card {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .format-card .cardtop {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .format-card .cardtop .dropdown {
+    flex: 1;
+  }
+
+  .format-card .cardtop .removeBtn {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    padding: 0 12px;
+  }
+
+  .format-card label {
+    margin: 8px 0 4px 0;
+  }
+
+  .format-card textarea {
+    min-height: 60px;
+    padding: 7px 9px;
+    background: var(--panel);
+  }
+
+  .format-card input[type="file"] {
+    background: var(--panel);
+  }
+
+  .file-picker {
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .file-picker-btn {
+    flex-shrink: 0;
+  }
+
+  .file-picker-name {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .status-msg {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 10px;
+  }
+  .status-msg.good { color: var(--good); }
+  .status-msg.bad { color: var(--danger); }
 </style>
 </head>
 <body>
 
-<h1>Advanced Clipboard Tester</h1>
-
-<!-- =============================== -->
-<!-- INPUT DROPDOWN -->
-<!-- =============================== -->
-<div class="card">
-<h2>Select Input Type</h2>
-<select id="inputSelector">
-<option value="none">-- Show Input --</option>
-<option value="textInput">Text Input (Plain)</option>
-<option value="textarea">Textarea (Plain)</option>
-<option value="contentEditable">ContentEditable (HTML)</option>
-<option value="codeBox">Code Paste (Literal HTML)</option>
-</select>
-
-<div id="textInputDiv" style="display:none;">
-  <input class="scrollbox" type="text" placeholder="Paste here (Ctrl+V)">
+<div class="navbar">
+  <button class="navbtn active" data-tab="readTab">Read Clipboard</button>
+  <button class="navbtn" data-tab="writeTab">Write Clipboard</button>
 </div>
 
-<div id="textareaDiv" style="display:none;">
-  <textarea class="scrollbox" placeholder="Paste here (Ctrl+V)"></textarea>
-</div>
+<div class="wrap">
+  <h1>Clipboard Editor</h1>
+  <p class="subtitle">Inspect what's on the clipboard, or build a custom multi-format payload to write to it.</p>
 
-<div id="contentEditableDiv" style="display:none;">
-  <div class="scrollbox" contenteditable="true">Paste here (Ctrl+V)</div>
-</div>
+  <!-- =============================== -->
+  <!-- READ TAB -->
+  <!-- =============================== -->
+  <div id="readTab" class="tabpanel active">
 
-<div id="codeBoxDiv" style="display:none;">
-  <div id="codeBox" class="codebox" contenteditable="true">Paste here (Ctrl+V)</div>
-</div>
-</div>
+    <div class="card">
+      <h2>Paste Target</h2>
+      <p class="desc">Choose how you want to paste (Ctrl+V) into a field, to see how each element type interprets the clipboard.</p>
+      <div id="inputSelectorMount"></div>
 
-<!-- =============================== -->
-<!-- RAW CLIPBOARD READER -->
-<!-- =============================== -->
-<div class="card">
-<h2>Raw Clipboard Viewer</h2>
-<p>Click the button to view clipboard literally (HTML, plain text, etc.)</p>
-<button id="readBtn">Read Clipboard Data</button>
+      <div id="textInputDiv" style="display:none;">
+        <label>Text Input</label>
+        <input class="scrollbox" type="text" placeholder="Paste here (Ctrl+V)">
+      </div>
 
-<h3>Available Types</h3>
-<div id="typesOut" class="codebox"></div>
+      <div id="textareaDiv" style="display:none;">
+        <label>Textarea</label>
+        <textarea class="scrollbox" placeholder="Paste here (Ctrl+V)"></textarea>
+      </div>
 
-<h3>text/plain</h3>
-<div id="plainOut" class="codebox"></div>
+      <div id="contentEditableDiv" style="display:none;">
+        <label>ContentEditable</label>
+        <div class="scrollbox" contenteditable="true" data-placeholder="Paste here (Ctrl+V)" style="background:var(--panel-alt); border:1px solid var(--border); padding:9px 11px;"></div>
+      </div>
 
-<h3>text/html</h3>
-<div id="htmlOut" class="codebox"></div>
-</div>
+      <div id="codeBoxDiv" style="display:none;">
+        <label>Code Box (strips formatting on paste)</label>
+        <div id="codeBox" class="codebox" contenteditable="true" data-placeholder="Paste here (Ctrl+V)"></div>
+      </div>
+    </div>
 
-<!-- =============================== -->
-<!-- CLIPBOARD WRITER -->
-<!-- =============================== -->
-<div class="card">
-<h2>Write to Clipboard (Multiple Formats)</h2>
-<div id="writeFormats"></div>
-<button id="addFormatBtn">Add Format</button>
-<button id="writeBtn">Write Clipboard</button>
+    <div class="card">
+      <h2>Raw Clipboard Viewer</h2>
+      <p class="desc">Reads the clipboard directly via the Async Clipboard API — shows exactly what types and content are available.</p>
+      <button id="readBtn">Read Clipboard Data</button>
+
+      <h3>Available Types</h3>
+      <div id="typesOut" class="codebox"></div>
+
+      <h3>text/plain</h3>
+      <div id="plainOut" class="codebox"></div>
+
+      <h3>text/html</h3>
+      <div id="htmlOut" class="codebox"></div>
+    </div>
+
+  </div>
+
+  <!-- =============================== -->
+  <!-- WRITE TAB -->
+  <!-- =============================== -->
+  <div id="writeTab" class="tabpanel">
+
+    <div class="card">
+      <h2>Format Builder</h2>
+      <p class="desc">Add one or more MIME formats (text/plain, text/html, text/rtf, image/png) to write to the clipboard as a single item.</p>
+
+      <div id="writeFormats"></div>
+
+      <div class="btnrow">
+        <button id="addFormatBtn" class="secondary">+ Add Format</button>
+        <button id="writeBtn">Write Clipboard</button>
+      </div>
+      <p id="writeStatus" class="status-msg"></p>
+    </div>
+
+  </div>
 </div>
 
 <script>
+// ---------- Nav / Tabs ----------
+document.querySelectorAll(".navbtn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".navbtn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tabpanel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ---------- Custom Dropdown (replaces native <select>) ----------
+function createDropdown(items, initialValue, onChange, small){
+  const wrap = document.createElement("div");
+  wrap.className = "dropdown" + (small ? " dropdown-sm" : "");
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "dropdown-toggle";
+
+  const labelSpan = document.createElement("span");
+  const chevron = document.createElement("span");
+  chevron.className = "dropdown-chevron";
+  toggle.appendChild(labelSpan);
+  toggle.appendChild(chevron);
+
+  const menu = document.createElement("div");
+  menu.className = "dropdown-menu";
+
+  let currentValue = initialValue;
+
+  function render(){
+    const found = items.find(i=>i.value===currentValue);
+    labelSpan.textContent = found ? found.label : "";
+    menu.innerHTML = "";
+    items.forEach(it=>{
+      const opt = document.createElement("div");
+      opt.className = "dropdown-option" + (it.value===currentValue ? " active" : "");
+      opt.textContent = it.label;
+      opt.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        currentValue = it.value;
+        render();
+        closeMenu();
+        if(onChange) onChange(currentValue);
+      });
+      menu.appendChild(opt);
+    });
+  }
+
+  function openMenu(){
+    document.querySelectorAll(".dropdown-menu.open").forEach(m=>{ if(m!==menu) m.classList.remove("open"); });
+    document.querySelectorAll(".dropdown-toggle.open").forEach(t=>{ if(t!==toggle) t.classList.remove("open"); });
+    menu.classList.add("open");
+    toggle.classList.add("open");
+  }
+  function closeMenu(){
+    menu.classList.remove("open");
+    toggle.classList.remove("open");
+  }
+
+  toggle.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    if(menu.classList.contains("open")) closeMenu(); else openMenu();
+  });
+
+  render();
+  wrap.appendChild(toggle);
+  wrap.appendChild(menu);
+
+  wrap.getValue = ()=>currentValue;
+  wrap.setValue = (v)=>{ currentValue=v; render(); };
+
+  return wrap;
+}
+
+document.addEventListener("click", ()=>{
+  document.querySelectorAll(".dropdown-menu.open").forEach(m=>m.classList.remove("open"));
+  document.querySelectorAll(".dropdown-toggle.open").forEach(t=>t.classList.remove("open"));
+});
+
 // ---------- Input Selector ----------
-const inputSelector = document.getElementById("inputSelector");
 const inputDivs = {
   textInput: document.getElementById("textInputDiv"),
   textarea: document.getElementById("textareaDiv"),
   contentEditable: document.getElementById("contentEditableDiv"),
   codeBox: document.getElementById("codeBoxDiv")
 };
-inputSelector.addEventListener("change", ()=>{
+const inputSelectorItems = [
+  {value:"none", label:"-- Show Input --"},
+  {value:"textInput", label:"Text Input (Plain)"},
+  {value:"textarea", label:"Textarea (Plain)"},
+  {value:"contentEditable", label:"ContentEditable (HTML)"},
+  {value:"codeBox", label:"Code Paste (Forced Plain Text)"}
+];
+const inputDropdown = createDropdown(inputSelectorItems, "none", (val)=>{
   Object.values(inputDivs).forEach(d=>d.style.display="none");
-  const val=inputSelector.value;
   if(inputDivs[val]) inputDivs[val].style.display="block";
 });
+document.getElementById("inputSelectorMount").appendChild(inputDropdown);
 
 // ---------- Clipboard Reader ----------
 document.getElementById("readBtn").addEventListener("click", async ()=>{
@@ -104,60 +554,136 @@ document.getElementById("readBtn").addEventListener("click", async ()=>{
     const items = await navigator.clipboard.read();
     const item = items[0];
     typesOut.innerText = item.types.join("\n");
-    if(item.types.includes("text/plain")) plainOut.innerText = await (await item.getType("text/plain")).text(); else plainOut.innerText="(none)";
-    if(item.types.includes("text/html")) htmlOut.innerText = await (await item.getType("text/html")).text(); else htmlOut.innerText="(none)";
+    plainOut.innerText = item.types.includes("text/plain")
+      ? await (await item.getType("text/plain")).text() : "(none)";
+    htmlOut.innerText = item.types.includes("text/html")
+      ? await (await item.getType("text/html")).text() : "(none)";
   }catch(e){
-    alert("Clipboard access denied: "+e);
+    typesOut.innerText = "Error: " + e;
   }
 });
 
-// ---------- Clipboard Writer ----------
+// ---------- Format Builder (inline, no modal) ----------
 const writeFormatsDiv = document.getElementById("writeFormats");
-function addFormatCard(type="", content=""){
+const writeStatus = document.getElementById("writeStatus");
+
+const formatTypeItems = [
+  {value:"text/plain", label:"text/plain"},
+  {value:"text/html", label:"text/html"},
+  {value:"text/rtf", label:"text/rtf"},
+  {value:"image/png", label:"image/png"}
+];
+
+function addFormatCard(type="text/plain", content=""){
   const div = document.createElement("div");
   div.className="format-card";
-  div.innerHTML=`
-  <label>Type:</label>
-  <select class="formatType">
-    <option value="text/plain" ${type==="text/plain"?"selected":""}>text/plain</option>
-    <option value="text/html" ${type==="text/html"?"selected":""}>text/html</option>
-    <option value="text/rtf" ${type==="text/rtf"?"selected":""}>text/rtf</option>
-    <option value="image/png" ${type==="image/png"?"selected":""}>image/png</option>
-  </select>
-  <label>Content (or select file for images):</label>
-  <textarea class="formatContent">${content}</textarea>
-  <input type="file" class="formatFile" style="display:none;">
-  <button class="removeBtn">Remove</button>
-  `;
-  const select = div.querySelector(".formatType");
-  const textarea = div.querySelector(".formatContent");
-  const fileInput = div.querySelector(".formatFile");
-  select.addEventListener("change", ()=>{
-    if(select.value.startsWith("image/")) { textarea.style.display="none"; fileInput.style.display="block"; }
-    else { textarea.style.display="block"; fileInput.style.display="none"; }
+
+  const cardtop = document.createElement("div");
+  cardtop.className = "cardtop";
+
+  const contentLabel = document.createElement("label");
+  contentLabel.textContent = "Content (or choose a file for images)";
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "formatContent";
+  textarea.value = content;
+
+  const fileWrap = document.createElement("div");
+  fileWrap.className = "file-picker";
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.className = "formatFile";
+  fileInput.accept = "image/png";
+  fileInput.style.display = "none";
+
+  const fileBtn = document.createElement("button");
+  fileBtn.type = "button";
+  fileBtn.className = "secondary file-picker-btn";
+  fileBtn.textContent = "Choose File";
+
+  const fileNameSpan = document.createElement("span");
+  fileNameSpan.className = "file-picker-name";
+  fileNameSpan.textContent = "No file chosen";
+
+  fileBtn.addEventListener("click", ()=>fileInput.click());
+  fileInput.addEventListener("change", ()=>{
+    fileNameSpan.textContent = fileInput.files[0] ? fileInput.files[0].name : "No file chosen";
   });
-  div.querySelector(".removeBtn").addEventListener("click", ()=>div.remove());
+
+  fileWrap.appendChild(fileBtn);
+  fileWrap.appendChild(fileNameSpan);
+  fileWrap.appendChild(fileInput);
+
+  const syncVisibility = (val)=>{
+    if(val.startsWith("image/")) { textarea.style.display="none"; fileWrap.style.display="flex"; }
+    else { textarea.style.display="block"; fileWrap.style.display="none"; }
+  };
+
+  const typeDropdown = createDropdown(formatTypeItems, type, syncVisibility, true);
+  typeDropdown.classList.add("formatType");
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "danger-outline removeBtn";
+  removeBtn.textContent = "Remove";
+  removeBtn.addEventListener("click", ()=>div.remove());
+
+  cardtop.appendChild(typeDropdown);
+  cardtop.appendChild(removeBtn);
+
+  div.appendChild(cardtop);
+  div.appendChild(contentLabel);
+  div.appendChild(textarea);
+  div.appendChild(fileWrap);
+
+  syncVisibility(type);
   writeFormatsDiv.appendChild(div);
 }
+
+function collectFormats(){
+  const cards = writeFormatsDiv.querySelectorAll(".format-card");
+  const result = [];
+  cards.forEach(card=>{
+    const type = card.querySelector(".formatType").getValue();
+    if(type.startsWith("image/")){
+      const file = card.querySelector(".formatFile").files[0];
+      result.push({type, file, text:null});
+    } else {
+      const text = card.querySelector(".formatContent").value;
+      result.push({type, file:null, text});
+    }
+  });
+  return result;
+}
+
 document.getElementById("addFormatBtn").addEventListener("click", ()=>addFormatCard());
+addFormatCard(); // seed with one card by default
+
+
 document.getElementById("writeBtn").addEventListener("click", async ()=>{
   try{
-    const cards = writeFormatsDiv.querySelectorAll(".format-card");
+    const formats = collectFormats();
     const itemObj = {};
-    for(const card of cards){
-      const type = card.querySelector(".formatType").value;
-      if(type.startsWith("image/")){
-        const file = card.querySelector(".formatFile").files[0];
-        if(file) itemObj[type]=file;
+    for(const f of formats){
+      if(f.type.startsWith("image/")){
+        if(f.file) itemObj[f.type]=f.file;
       } else {
-        const text = card.querySelector(".formatContent").value;
-        itemObj[type]=new Blob([text], {type});
+        itemObj[f.type]=new Blob([f.text], {type:f.type});
       }
     }
-    if(Object.keys(itemObj).length===0) return alert("No formats to write.");
+    if(Object.keys(itemObj).length===0){
+      writeStatus.textContent = "No formats to write.";
+      writeStatus.className = "status-msg bad";
+      return;
+    }
     await navigator.clipboard.write([new ClipboardItem(itemObj)]);
-    alert("Clipboard updated!");
-  }catch(e){ alert("Failed to write: "+e); }
+    writeStatus.textContent = "Clipboard updated.";
+    writeStatus.className = "status-msg good";
+  }catch(e){
+    writeStatus.textContent = "Failed: " + e;
+    writeStatus.className = "status-msg bad";
+  }
 });
 
 // ---------- Force plain text paste for code box ----------
